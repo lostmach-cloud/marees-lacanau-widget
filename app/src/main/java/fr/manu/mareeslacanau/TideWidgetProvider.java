@@ -159,10 +159,16 @@ public class TideWidgetProvider extends AppWidgetProvider {
                     RemoteViews views =
                         baseViews(context);
 
-                    views.setTextViewText(
-                        R.id.status,
-                        "Données indisponibles · toucher pour réessayer"
-                    );
+                    String message = e.getClass().getSimpleName();
+
+if (e.getMessage() != null) {
+    message += " : " + e.getMessage();
+}
+
+views.setTextViewText(
+    R.id.status,
+    message
+);
 
                     manager.updateAppWidget(
                         id,

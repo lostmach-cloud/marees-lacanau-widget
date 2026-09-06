@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public class ShomClient {
 
     private static final String SOURCE =
-        "https://services.data.shom.fr/hdm/vignette/petite/LACANAU?locale=fr";
+        "https://lacanausurfinfo.com/";
 
     public static List<Tide> fetch() throws Exception {
 
@@ -22,9 +22,15 @@ public class ShomClient {
 
         connection.setConnectTimeout(12000);
         connection.setReadTimeout(12000);
+
         connection.setRequestProperty(
             "User-Agent",
-            "MareesLacanauWidget/1.0 Android"
+            "Mozilla/5.0 (Android) MareesLacanauWidget/1.0"
+        );
+
+        connection.setRequestProperty(
+            "Accept-Language",
+            "fr-FR,fr;q=0.9"
         );
 
         StringBuilder raw = new StringBuilder();
@@ -44,61 +50,118 @@ public class ShomClient {
         return parse(raw.toString());
     }
 
-    static List<Tide> parse(String input) {
+    static List<Tide> parse(String html) {
 
-        String s = input
-            .replace("\\\"", "\"")
-            .replace("\\n", " ")
-            .replace("&nbsp;", " ")
-            .replace(",", ".");
+        Pattern tablePattern = Pattern.compile(
+            "(?is)<div[^>]*bouees_row__mareesbox[^>]*>(.*?)</table>"
+        );
 
-        s = s
-            .replaceAll("(?is)<br\\s*/?>", " | ")
-            .replaceAll("(?is)</tr>", " || ")
-            .replaceAll("(?is)</td>", " | ")
-            .replaceAll("(?is)<[^>]+>", " ")
-            .replaceAll("\\s+", " ");
+        Matcher tableMatcher = tablePattern.matcher(html);
+
+        if (!tableMatcher.find()) {
+            throw new IllegalStateException(
+                "Tableau des marées introuvable"
+            );
+        }
+
+        String table = tableMatcher.group(1);
+
+        String[] coeffs = extractRow(table, "COEFF");
+        String[] pleineMer = extractRow(table, "PLEINE MER");
+        String[] basseMer = extractRow(table, "BASSE MER");
 
         List<Tide> result = new ArrayList<>();
 
-        Pattern p = Pattern.compile(
-            "(PM|BM).*?([0-2]?\\d[:h][0-5]\\d).*?" +
-            "([0-9]+(?:\\.[0-9]+)?)\\s*m?" +
-            "(?:.*?\\b([2-9]\\d|1[01]\\d|120)\\b)?",
-            Pattern.CASE_INSENSITIVE
+        result.add(
+            new Tide(
+                "PM",
+                normalizeTime(pleineMer[0]),
+                "",
+                coeffs[0]
+            )
         );
 
-        Matcher m = p.matcher(s);
+        result.add(
+            new Tide(
+                "BM",
+                normalizeTime(basseMer[0]),
+                "",
+                ""
+            )
+        );
 
-        while (m.find() && result.size() < 4) {
+        result.add(
+            new Tide(
+                "PM",
+                normalizeTime(pleineMer[1]),
+                "",
+                coeffs[1]
+            )
+        );
 
-            String type = m.group(1).toUpperCase();
-            String time = m.group(2).replace('h', ':');
-
-            if (time.length() == 4) {
-                time = "0" + time;
-            }
-
-            String height = m.group(3) + " m";
-
-            String coef =
-                m.group(4) == null ? "" : m.group(4);
-
-            if ("BM".equals(type)) {
-                coef = "";
-            }
-
-            result.add(
-                new Tide(type, time, height, coef)
-            );
-        }
-
-        if (result.isEmpty()) {
-            throw new IllegalStateException(
-                "Format SHOM non reconnu"
-            );
-        }
+        result.add(
+            new Tide(
+                "BM",
+                normalizeTime(basseMer[1]),
+                "",
+                ""
+            )
+        );
 
         return result;
+    }
+
+    private static String[] extractRow(
+        String table,
+        String label
+    ) {
+
+        Pattern p = Pattern.compile(
+            "(?is)" +
+            Pattern.quote(label) +
+            "\\s*</td>\\s*" +
+            "<td[^>]*>(.*?)</td>\\s*" +
+            "<td[^>]*>(.*?)</td>"
+        );
+
+        Matcher m = p.matcher(table);
+
+        if (!m.find()) {
+            throw new IllegalStateException(
+                "Ligne " + label + " introuvable"
+            );
+        }
+
+        return new String[] {
+            clean(m.group(1)),
+            clean(m.group(2))
+        };
+    }
+
+    private static String clean(String s) {
+        return s
+            .replaceAll("(?is)<[^>]+>", "")
+            .replace("&nbsp;", " ")
+            .trim();
+    }
+
+    private static String normalizeTime(String time) {
+
+        time = time
+            .toLowerCase()
+            .replace('h', ':')
+            .trim();
+
+        String[] parts = time.split(":");
+
+        if (parts.length == 2) {
+            return String.format(
+                "%02d:%02d",
+                Integer.parseInt(parts[0]),
+                Integer.parseInt(parts[1])
+            );
+        }
+
+        return time;
     }
 }

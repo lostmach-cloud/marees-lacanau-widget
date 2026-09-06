@@ -159,7 +159,7 @@ public class TideWidgetProvider extends AppWidgetProvider {
                     RemoteViews views =
                         baseViews(context);
 
-                    String message = e.getClass().getSimpleName();
+                   String message = e.getClass().getSimpleName();
 
 if (e.getMessage() != null) {
     message += " : " + e.getMessage();

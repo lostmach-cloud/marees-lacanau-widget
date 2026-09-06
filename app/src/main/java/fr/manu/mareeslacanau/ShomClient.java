@@ -1,62 +1,86 @@
 package fr.manu.mareeslacanau;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import okhttp3.dnsoverhttps.DnsOverHttps;
+
 public class ShomClient {
 
     private static final String SOURCE =
-    "https://www.google.com/";
+        "https://www.lacanausurfinfo.com/";
 
     public static List<Tide> fetch() throws Exception {
 
-        HttpURLConnection connection =
-            (HttpURLConnection) new URL(SOURCE).openConnection();
+        OkHttpClient bootstrapClient =
+            new OkHttpClient.Builder().build();
 
-        connection.setConnectTimeout(12000);
-        connection.setReadTimeout(12000);
+        DnsOverHttps dns =
+            new DnsOverHttps.Builder()
+                .client(bootstrapClient)
+                .url(
+                    HttpUrl.get(
+                        "https://cloudflare-dns.com/dns-query"
+                    )
+                )
+                .post(true)
+                .build();
 
-        connection.setRequestProperty(
-            "User-Agent",
-            "Mozilla/5.0 (Android) MareesLacanauWidget/1.0"
-        );
+        OkHttpClient client =
+            new OkHttpClient.Builder()
+                .dns(dns)
+                .build();
 
-        connection.setRequestProperty(
-            "Accept-Language",
-            "fr-FR,fr;q=0.9"
-        );
+        Request request =
+            new Request.Builder()
+                .url(SOURCE)
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Android) MareesLacanauWidget/1.0"
+                )
+                .header(
+                    "Accept-Language",
+                    "fr-FR,fr;q=0.9"
+                )
+                .build();
 
-        StringBuilder raw = new StringBuilder();
+        try (Response response =
+                 client.newCall(request).execute()) {
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(
-                    connection.getInputStream(),
-                    StandardCharsets.UTF_8))) {
-
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                raw.append(line).append('\n');
+            if (!response.isSuccessful()) {
+                throw new IllegalStateException(
+                    "HTTP " + response.code()
+                );
             }
-        }
 
-        return parse(raw.toString());
+            ResponseBody body = response.body();
+
+            if (body == null) {
+                throw new IllegalStateException(
+                    "Réponse vide"
+                );
+            }
+
+            return parse(body.string());
+        }
     }
 
     static List<Tide> parse(String html) {
 
-        Pattern tablePattern = Pattern.compile(
-            "(?is)<div[^>]*bouees_row__mareesbox[^>]*>(.*?)</table>"
-        );
+        Pattern tablePattern =
+            Pattern.compile(
+                "(?is)<div[^>]*bouees_row__mareesbox[^>]*>(.*?)</table>"
+            );
 
-        Matcher tableMatcher = tablePattern.matcher(html);
+        Matcher tableMatcher =
+            tablePattern.matcher(html);
 
         if (!tableMatcher.find()) {
             throw new IllegalStateException(
@@ -64,13 +88,20 @@ public class ShomClient {
             );
         }
 
-        String table = tableMatcher.group(1);
+        String table =
+            tableMatcher.group(1);
 
-        String[] coeffs = extractRow(table, "COEFF");
-        String[] pleineMer = extractRow(table, "PLEINE MER");
-        String[] basseMer = extractRow(table, "BASSE MER");
+        String[] coeffs =
+            extractRow(table, "COEFF");
 
-        List<Tide> result = new ArrayList<>();
+        String[] pleineMer =
+            extractRow(table, "PLEINE MER");
+
+        String[] basseMer =
+            extractRow(table, "BASSE MER");
+
+        List<Tide> result =
+            new ArrayList<>();
 
         result.add(
             new Tide(
@@ -116,13 +147,14 @@ public class ShomClient {
         String label
     ) {
 
-        Pattern p = Pattern.compile(
-            "(?is)" +
-            Pattern.quote(label) +
-            "\\s*</td>\\s*" +
-            "<td[^>]*>(.*?)</td>\\s*" +
-            "<td[^>]*>(.*?)</td>"
-        );
+        Pattern p =
+            Pattern.compile(
+                "(?is)" +
+                Pattern.quote(label) +
+                "\\s*</td>\\s*" +
+                "<td[^>]*>(.*?)</td>\\s*" +
+                "<td[^>]*>(.*?)</td>"
+            );
 
         Matcher m = p.matcher(table);
 
@@ -139,22 +171,27 @@ public class ShomClient {
     }
 
     private static String clean(String s) {
+
         return s
             .replaceAll("(?is)<[^>]+>", "")
             .replace("&nbsp;", " ")
             .trim();
     }
 
-    private static String normalizeTime(String time) {
+    private static String normalizeTime(
+        String time
+    ) {
 
-        time = time
-            .toLowerCase()
-            .replace('h', ':')
-            .trim();
+        time =
+            time.toLowerCase()
+                .replace('h', ':')
+                .trim();
 
-        String[] parts = time.split(":");
+        String[] parts =
+            time.split(":");
 
         if (parts.length == 2) {
+
             return String.format(
                 "%02d:%02d",
                 Integer.parseInt(parts[0]),

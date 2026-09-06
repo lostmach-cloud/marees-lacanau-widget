@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public class ShomClient {
 
     private static final String SOURCE =
-        "https://www.lacanausurfinfo.com/";
+    "https://www.google.com/";
 
     public static List<Tide> fetch() throws Exception {
 

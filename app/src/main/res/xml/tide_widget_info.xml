@@ -2,9 +2,9 @@
 <appwidget-provider
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
-    android:minHeight="180dp"
+    android:minHeight="80dp"
     android:minResizeWidth="160dp"
-    android:minResizeHeight="160dp"
+    android:minResizeHeight="70dp"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_tides"
     android:resizeMode="horizontal|vertical"

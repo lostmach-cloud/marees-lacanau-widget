@@ -10,12 +10,8 @@ import android.content.Intent;
 import android.view.View;
 import android.widget.RemoteViews;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -34,30 +30,21 @@ public class TideWidgetProvider extends AppWidgetProvider {
     }
 
     @Override
-    public void onUpdate(
-        Context context,
-        AppWidgetManager manager,
-        int[] appWidgetIds
-    ) {
-        updateWidgets(context, manager, appWidgetIds);
+    public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        updateWidgets(context, manager, ids);
         scheduleDailyUpdate(context);
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-
         super.onReceive(context, intent);
 
         if (ACTION_REFRESH.equals(intent.getAction())) {
-
             AppWidgetManager manager =
                 AppWidgetManager.getInstance(context);
 
             int[] ids = manager.getAppWidgetIds(
-                new ComponentName(
-                    context,
-                    TideWidgetProvider.class
-                )
+                new ComponentName(context, TideWidgetProvider.class)
             );
 
             updateWidgets(context, manager, ids);
@@ -65,34 +52,25 @@ public class TideWidgetProvider extends AppWidgetProvider {
     }
 
     public static void scheduleDailyUpdate(Context context) {
-
         AlarmManager alarm =
-            (AlarmManager) context.getSystemService(
-                Context.ALARM_SERVICE
-            );
+            (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-        Intent intent =
-            new Intent(context, TideWidgetProvider.class);
-
+        Intent intent = new Intent(context, TideWidgetProvider.class);
         intent.setAction(ACTION_REFRESH);
 
-        PendingIntent pi =
-            PendingIntent.getBroadcast(
-                context,
-                100,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT |
-                PendingIntent.FLAG_IMMUTABLE
-            );
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context,
+            100,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         Calendar next = Calendar.getInstance();
         next.set(Calendar.HOUR_OF_DAY, 0);
         next.set(Calendar.MINUTE, 10);
         next.set(Calendar.SECOND, 0);
 
-        if (next.getTimeInMillis()
-                <= System.currentTimeMillis()) {
-
+        if (next.getTimeInMillis() <= System.currentTimeMillis()) {
             next.add(Calendar.DAY_OF_YEAR, 1);
         }
 
@@ -109,210 +87,85 @@ public class TideWidgetProvider extends AppWidgetProvider {
         AppWidgetManager manager,
         int[] ids
     ) {
-
         if (ids == null || ids.length == 0) {
             return;
         }
 
-        for (int id : ids) {
-
-            RemoteViews loading =
-                baseViews(context);
-
-            loading.setTextViewText(
-                R.id.status,
-                "Actualisation…"
-            );
-
-            manager.updateAppWidget(id, loading);
-        }
-
         EXECUTOR.execute(() -> {
-
             try {
-
-                List<Tide> tides =
-                    ShomClient.fetch();
+                List<Tide> tides = ShomClient.fetch();
 
                 for (int id : ids) {
-
-                    RemoteViews views =
-                        baseViews(context);
-
+                    RemoteViews views = baseViews(context);
                     fillTides(views, tides);
-
-                    views.setTextViewText(
-                        R.id.status,
-                        "Source : SHOM"
-                    );
-
-                    manager.updateAppWidget(
-                        id,
-                        views
-                    );
+                    manager.updateAppWidget(id, views);
                 }
 
             } catch (Exception e) {
-
                 for (int id : ids) {
+                    RemoteViews views = baseViews(context);
 
-                    RemoteViews views =
-                        baseViews(context);
-
-                   String message = e.getClass().getSimpleName();
-
-if (e.getMessage() != null) {
-    message += " : " + e.getMessage();
-}
-
-views.setTextViewText(
-    R.id.status,
-    message
-);
-
-                    manager.updateAppWidget(
-                        id,
-                        views
+                    views.setViewVisibility(R.id.status, View.VISIBLE);
+                    views.setTextViewText(
+                        R.id.status,
+                        "Données indisponibles"
                     );
+
+                    manager.updateAppWidget(id, views);
                 }
             }
         });
     }
 
-    private static RemoteViews baseViews(
-        Context context
-    ) {
-
-        RemoteViews views =
-            new RemoteViews(
-                context.getPackageName(),
-                R.layout.widget_tides
-            );
-
-        String date =
-            LocalDate.now().format(
-                DateTimeFormatter.ofPattern(
-                    "EEE d MMM",
-                    Locale.FRANCE
-                )
-            );
+    private static RemoteViews baseViews(Context context) {
+        RemoteViews views = new RemoteViews(
+            context.getPackageName(),
+            R.layout.widget_tides
+        );
 
         views.setTextViewText(
             R.id.title,
             "🌊  MARÉES · LACANAU"
         );
 
-        views.setTextViewText(
-            R.id.date,
-            date
-        );
+        views.setViewVisibility(R.id.status, View.GONE);
 
-        Intent refresh =
-            new Intent(
-                context,
-                TideWidgetProvider.class
-            );
-
+        Intent refresh = new Intent(context, TideWidgetProvider.class);
         refresh.setAction(ACTION_REFRESH);
 
-        PendingIntent refreshIntent =
-            PendingIntent.getBroadcast(
-                context,
-                1,
-                refresh,
-                PendingIntent.FLAG_UPDATE_CURRENT |
-                PendingIntent.FLAG_IMMUTABLE
-            );
-
-        views.setOnClickPendingIntent(
-            R.id.root,
-            refreshIntent
+        PendingIntent refreshIntent = PendingIntent.getBroadcast(
+            context,
+            1,
+            refresh,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        int[] rows = {
-            R.id.row1,
-            R.id.row2,
-            R.id.row3,
-            R.id.row4
-        };
-
-        for (int row : rows) {
-            views.setViewVisibility(row, View.GONE);
-        }
+        views.setOnClickPendingIntent(R.id.root, refreshIntent);
 
         return views;
     }
 
-    private static void fillTides(
-        RemoteViews views,
-        List<Tide> tides
-    ) {
-
-        int[] rows = {
-            R.id.row1,
-            R.id.row2,
-            R.id.row3,
-            R.id.row4
-        };
-
-        int[] symbols = {
-            R.id.kind1,
-            R.id.kind2,
-            R.id.kind3,
-            R.id.kind4
-        };
-
-        int[] times = {
-            R.id.time1,
-            R.id.time2,
-            R.id.time3,
-            R.id.time4
-        };
-
-        int[] details = {
-            R.id.detail1,
-            R.id.detail2,
-            R.id.detail3,
-            R.id.detail4
-        };
-
-        int count =
-            Math.min(4, tides.size());
-
-        for (int i = 0; i < count; i++) {
-
-            Tide tide = tides.get(i);
-
-            views.setViewVisibility(
-                rows[i],
-                View.VISIBLE
-            );
-
-            views.setTextViewText(
-                symbols[i],
-                "PM".equals(tide.type)
-                    ? "↑"
-                    : "↓"
-            );
-
-            views.setTextViewText(
-                times[i],
-                tide.time
-            );
-
-            String detail =
-                tide.height;
-
-            if (!tide.coefficient.isEmpty()) {
-                detail +=
-                    " · coef. " +
-                    tide.coefficient;
-            }
-
-            views.setTextViewText(
-                details[i],
-                detail
-            );
+    private static void fillTides(RemoteViews views, List<Tide> tides) {
+        if (tides.size() < 4) {
+            throw new IllegalStateException("Marées incomplètes");
         }
+
+        Tide pm1 = tides.get(0);
+        Tide bm1 = tides.get(1);
+        Tide pm2 = tides.get(2);
+        Tide bm2 = tides.get(3);
+
+        String line1 =
+            "↑ " + pm1.time +
+            "    ↓ " + bm1.time +
+            "    coef. " + pm1.coefficient;
+
+        String line2 =
+            "↑ " + pm2.time +
+            "    ↓ " + bm2.time +
+            "    coef. " + pm2.coefficient;
+
+        views.setTextViewText(R.id.line1, line1);
+        views.setTextViewText(R.id.line2, line2);
     }
 }

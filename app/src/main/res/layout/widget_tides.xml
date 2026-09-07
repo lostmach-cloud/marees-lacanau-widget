@@ -5,63 +5,48 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="14dp"
-    android:background="@drawable/widget_background">
+    android:gravity="center_vertical"
+    android:paddingLeft="10dp"
+    android:paddingRight="10dp"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
+    android:background="@android:color/transparent">
 
     <TextView
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="🌊  MARÉES · LACANAU"
         android:textStyle="bold"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:textColor="#FFFFFFFF"/>
 
     <TextView
-        android:id="@+id/date"
+        android:id="@+id/line1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFFFF"
+        android:maxLines="1"/>
+
+    <TextView
+        android:id="@+id/line2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textSize="11sp"
-        android:textColor="#CCFFFFFF"/>
-
-    <LinearLayout
-        android:id="@+id/row1"
-        style="@style/TideRow">
-        <TextView android:id="@+id/kind1" style="@style/TideKind"/>
-        <TextView android:id="@+id/time1" style="@style/TideTime"/>
-        <TextView android:id="@+id/detail1" style="@style/TideDetail"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/row2"
-        style="@style/TideRow">
-        <TextView android:id="@+id/kind2" style="@style/TideKind"/>
-        <TextView android:id="@+id/time2" style="@style/TideTime"/>
-        <TextView android:id="@+id/detail2" style="@style/TideDetail"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/row3"
-        style="@style/TideRow">
-        <TextView android:id="@+id/kind3" style="@style/TideKind"/>
-        <TextView android:id="@+id/time3" style="@style/TideTime"/>
-        <TextView android:id="@+id/detail3" style="@style/TideDetail"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/row4"
-        style="@style/TideRow">
-        <TextView android:id="@+id/kind4" style="@style/TideKind"/>
-        <TextView android:id="@+id/time4" style="@style/TideTime"/>
-        <TextView android:id="@+id/detail4" style="@style/TideDetail"/>
-    </LinearLayout>
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFFFF"
+        android:maxLines="1"/>
 
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
         android:textSize="9sp"
-        android:textColor="#AAFFFFFF"/>
+        android:textColor="#CCFFFFFF"
+        android:visibility="gone"/>
 
 </LinearLayout>
